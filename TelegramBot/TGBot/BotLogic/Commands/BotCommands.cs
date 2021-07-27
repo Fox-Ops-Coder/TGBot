@@ -9,7 +9,7 @@ namespace TGBot.BotLogic.Commands
     /// </summary>
     internal sealed class BotCommands
     {
-        public const long myId = 0;
+        public static long myId = 0;
 
         public const int dataLenght = 2;
 

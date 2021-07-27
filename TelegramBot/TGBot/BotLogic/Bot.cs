@@ -2,6 +2,7 @@
 using System;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
+using TGBot.BotLogic.Commands;
 
 namespace TGBot.BotLogic
 {
@@ -31,16 +32,17 @@ namespace TGBot.BotLogic
                 TelegramBotClient telegramBotClient = new(botToken);
                 await telegramBotClient.SetWebhookAsync("");
 
-                /*
                 try
                 {
                     await telegramBotClient.SendTextMessageAsync(BotCommands.myId, "Бот запущен");
                 }
                 catch (ApiRequestException e)
                 {
+                    Console.Error.WriteLine("При попытке отправить сообщение в модераторский чат произошла ошибка");
                     Console.Error.WriteLine(e);
+
+                    needStop = true;
                 }
-                */
 
                 Console.Out.WriteLine("Бот запущен");
 
