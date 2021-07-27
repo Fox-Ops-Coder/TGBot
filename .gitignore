@@ -1,0 +1,5 @@
+# C# Cache files
+
+/TelegramBot/.vs
+/TelegramBot/**/bin
+/TelegramBot/**/obj
