@@ -27,7 +27,46 @@ namespace DataAccessLayer.Data
                         }
                     };
 
-                    tGContext.AddRange(professions);
+                    Tag[] tags = new Tag[]
+                    {
+                        new Tag
+                        {
+                            TagName = "Node.js"
+                        },
+
+                        new Tag
+                        {
+                            TagName = "TypeScript"
+                        },
+
+                        new Tag
+                        {
+                            TagName = "HTML"
+                        },
+
+                        new Tag
+                        {
+                            TagName = "C#"
+                        },
+
+                        new Tag
+                        {
+                            TagName = "Python"
+                        },
+
+                        new Tag
+                        {
+                            TagName = "Entity Core"
+                        },
+
+                        new Tag
+                        {
+                            TagName = "Django"
+                        }
+                    };
+
+                    tGContext.Professions.AddRange(professions);
+                    tGContext.Tags.AddRange(tags);
                     tGContext.SaveChanges();
                 }
 

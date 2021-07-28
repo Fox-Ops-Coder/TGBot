@@ -16,6 +16,8 @@ namespace TGBot.BotLogic
         /// </summary>
         private bool needStop;
 
+        private bool isRunning;
+
         public Bot(TGContext tGContext, string botToken)
         {
             this.tGContext = tGContext;
@@ -29,6 +31,8 @@ namespace TGBot.BotLogic
         {
             try
             {
+                isRunning = true;
+
                 TelegramBotClient telegramBotClient = new(botToken);
                 await telegramBotClient.SetWebhookAsync("");
 
@@ -55,6 +59,8 @@ namespace TGBot.BotLogic
 
                 await telegramBotClient.CloseAsync();
                 Console.Out.WriteLine("Бот остановлен");
+
+                isRunning = false;
             }
             catch (ApiRequestException e)
             {
@@ -88,6 +94,8 @@ namespace TGBot.BotLogic
                         break;
                 }
             } while (!needStop);
+
+            while (isRunning) ;
         }
     }
 }

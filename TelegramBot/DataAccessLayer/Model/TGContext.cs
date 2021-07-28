@@ -10,6 +10,9 @@ namespace DataAccessLayer.Model
         public DbSet<Profession> Professions { get; set; }
         public DbSet<Cource> Cources { get; set; }
         public DbSet<Vacancy> Vacancies { get; set; }
+        public DbSet<Tag> Tags { get; set; }
+        public DbSet<VacancyTagRecord> VacancyTagRecords { get; set; }
+        public DbSet<CourceTagRecord> CourceTagRecords { get; set; }
 
         public TGContext(string pgConnection) => this.pgConnection = pgConnection;
 
@@ -35,12 +38,50 @@ namespace DataAccessLayer.Model
             {
                 entity.Property(cource => cource.CourceId)
                 .ValueGeneratedOnAdd();
+
+                entity.HasMany(cource => cource.CourceTagRecords)
+                .WithOne(record => record.Cource)
+                .HasForeignKey(record => record.CourceId)
+                .OnDelete(DeleteBehavior.Cascade);
             });
 
             modelBuilder.Entity<Vacancy>(entity =>
             {
                 entity.Property(vacancy => vacancy.VacancyId)
                 .ValueGeneratedOnAdd();
+
+                entity.HasMany(vacancy => vacancy.VacancyTagRecords)
+                .WithOne(record => record.Vacancy)
+                .HasForeignKey(record => record.VacancyId)
+                .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<VacancyTagRecord>(entity =>
+            {
+                entity.Property(record => record.RecordId)
+                .ValueGeneratedOnAdd();
+            });
+
+            modelBuilder.Entity<CourceTagRecord>(entity =>
+            {
+                entity.Property(record => record.RecordId)
+                .ValueGeneratedOnAdd();
+            });
+
+            modelBuilder.Entity<Tag>(entity =>
+            {
+                entity.Property(tag => tag.TagId)
+                .ValueGeneratedOnAdd();
+
+                entity.HasMany(tag => tag.CourceTagRecords)
+                .WithOne(record => record.Tag)
+                .HasForeignKey(record => record.TagId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasMany(tag => tag.VacancyTagRecords)
+                .WithOne(record => record.Tag)
+                .HasForeignKey(record => record.TagId)
+                .OnDelete(DeleteBehavior.Cascade);
             });
         }
 

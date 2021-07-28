@@ -16,6 +16,10 @@ namespace TGBot.BotLogic.Commands
         public const string StartCommand = "/start";
         public const string WhoCommand = "Кто я?";
 
+        public const string SearchCommand = "Search";
+        public const string AddTag = "Tag";
+        public const string StopSearch = "StopSearch";
+
         public const string AddCource = "AddCource";
         public const string AddVacancy = "AddVacancy";
         public const string Cancel = "Cancel";

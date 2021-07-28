@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DataAccessLayer.Entities
@@ -22,6 +23,15 @@ namespace DataAccessLayer.Entities
         [Required]
         public string Url { get; set; }
 
+        [NotMapped]
         public Profession Profession;
+
+        [NotMapped]
+        public ICollection<CourceTagRecord> CourceTagRecords;
+
+        public Cource()
+        {
+            CourceTagRecords = new List<CourceTagRecord>();
+        }
     }
 }
