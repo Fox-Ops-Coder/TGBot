@@ -323,7 +323,9 @@ namespace TGBot.BotLogic
                     PendingAdd pendingAdd = pendingAdds.Find(pendingAdd => pendingAdd.id == message.Chat.Id);
                     Searcher searcher = pendingSearches.Find(pendingSearch => pendingSearch.userId == message.Chat.Id);
 
-                    if (pendingAdd != null) pendingMessage(pendingAdd);
+                    if (pendingAdd != null && searcher != null) telegramBotClient
+                     .SendTextMessageAsync(message.Chat.Id, "Выберите теги", replyMarkup: GenerateTagMessage(searcher, false));
+                    else if (pendingAdd != null) pendingMessage(pendingAdd);
                     else if (searcher != null) telegramBotClient
                     .SendTextMessageAsync(message.Chat.Id, "Выберите теги", replyMarkup: GenerateTagMessage(searcher));
                     else standartMessage();
@@ -417,17 +419,23 @@ namespace TGBot.BotLogic
                 () => vacancies = GetUnic(vacancies)
             });
 
-            telegramBotClient.SendTextMessageAsync(charId, "Курсы").Wait();
-            foreach (Cource cource in cources)
+            new Task(() =>
             {
-                telegramBotClient.SendTextMessageAsync(charId, cource.CourceName + '\n' + cource.Url);
-            }
+                telegramBotClient.SendTextMessageAsync(charId, "Курсы").Wait();
+                foreach (Cource cource in cources)
+                {
+                    telegramBotClient.SendTextMessageAsync(charId, cource.CourceName + '\n' + cource.Url).Wait();
+                }
 
-            telegramBotClient.SendTextMessageAsync(charId, "Вакансии").Wait();
-            foreach (Vacancy vacancy in vacancies)
-            {
-                telegramBotClient.SendTextMessageAsync(charId, vacancy.VacancyName + '\n' + vacancy.Url);
-            }
+                telegramBotClient.SendTextMessageAsync(charId, "Вакансии").Wait();
+                foreach (Vacancy vacancy in vacancies)
+                {
+                    telegramBotClient.SendTextMessageAsync(charId, vacancy.VacancyName + '\n' + vacancy.Url).Wait();
+                }
+
+            }).Start();
+
+            pendingSearches.Remove(pendingSearches.Find(search => search.userId == charId));
         }
 
         /// <summary>
