@@ -15,11 +15,11 @@ namespace DataAccessLayer.Entities
         [NotMapped]
         public Tag Tag;
 
-        public TagRecordBase()
+        protected TagRecordBase()
         {
         }
 
-        public TagRecordBase(TagRecordBase source)
+        protected TagRecordBase(TagRecordBase source)
         {
             RecordId = source.RecordId;
             TagId = source.TagId;

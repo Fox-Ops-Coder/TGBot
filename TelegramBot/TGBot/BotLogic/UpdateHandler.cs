@@ -142,15 +142,64 @@ namespace TGBot.BotLogic
         }
 
         /// <summary>
+        /// Обрабатывает добавление объекта
+        /// </summary>
+        /// <param name="Tags">Список id тегов</param>
+        /// <param name="chatId">Id чата</param>
+        private void HandleObjectAdd(List<int> Tags, long chatId)
+        {
+            PendingObjectAdd newObject = pendingObjects.Find(pendingAdd => pendingAdd.id == chatId);
+
+            int count = Tags.Count;
+            int index = 0;
+            Tag[] tags = new Tag[count];
+
+            foreach (int tagId in Tags)
+            {
+                tags[index] = tGContext.Tags.Find(tagId);
+                ++index;
+            }
+
+            InlineKeyboardMarkup moderatorButtons = BotCommands.GetModeratorComands(newObject.guid);
+
+            string tagsMessage = "Пользователь добвил следующие теги:\n";
+            foreach (Tag tag in tags)
+            {
+                tagsMessage += tag.TagName + '\n';
+            }
+
+            newObject.Tags = tags;
+
+            switch (newObject.type)
+            {
+                case Types.Cource:
+                    Cource cource = (Cource)newObject.addObject;
+
+                    telegramBotClient.SendTextMessageAsync(BotCommands.myId, "Запрос на добавление курса\n"
+                        + cource.CourceName + '\n' + cource.Url + '\n' + tagsMessage, replyMarkup: moderatorButtons);
+                    telegramBotClient.SendTextMessageAsync(chatId, "Ваша заявка на добавление курса отправлена модератору", replyMarkup: BotCommands.whoButtons);
+                    break;
+
+                case Types.Vacancy:
+                    Vacancy vacancy = (Vacancy)newObject.addObject;
+
+                    telegramBotClient.SendTextMessageAsync(BotCommands.myId, "Запрос на добавление вакансии\n"
+                        + vacancy.VacancyName + '\n' + vacancy.Url + '\n' + tagsMessage, replyMarkup: moderatorButtons);
+                    telegramBotClient.SendTextMessageAsync(chatId, "Ваша заявка на добавление вакансии отправлена модератору", replyMarkup: BotCommands.whoButtons);
+                    break;
+            }
+        }
+
+        /// <summary>
         /// Возращает разметку для тегов
         /// </summary>
         /// <param name="searcher">Хранилище тегов, для которого нужна разметка</param>
         /// <returns></returns>
-        private InlineKeyboardMarkup GenerateTagMessage(Searcher searcher)
+        private InlineKeyboardMarkup GenerateTagMessage(Searcher searcher, bool isSearch = true)
         {
             static List<Tag> GetTags(TGContext tGContext) => tGContext.Tags.ToList();
 
-            static InlineKeyboardMarkup CreateMarkupForList(List<Tag> tags)
+            static InlineKeyboardMarkup CreateMarkupForList(List<Tag> tags, bool isSearch)
             {
                 int count = tags.Count + 1;
                 int index = 0;
@@ -175,13 +224,13 @@ namespace TGBot.BotLogic
                 {
                     new InlineKeyboardButton
                     {
-                        Text = "Найти",
+                        Text = isSearch == true ? "Найти" : "Оставить заявку",
                         CallbackData = BotCommands.StopSearch
                     },
 
                     new InlineKeyboardButton
                     {
-                        Text = "Отменить поиск",
+                        Text = isSearch == true ? "Отменить поиск" : "Отменить",
                         CallbackData = BotCommands.Cancel
                     }
                 };
@@ -192,7 +241,7 @@ namespace TGBot.BotLogic
             List<Tag> tags = GetTags(tGContext);
             tags = searcher.FindDifference(tags);
 
-            return CreateMarkupForList(tags);
+            return CreateMarkupForList(tags, isSearch);
         }
 
         /// <summary>
@@ -210,7 +259,18 @@ namespace TGBot.BotLogic
 
                 if (data.Length == BotCommands.dataLenght)
                 {
+                    Searcher newSearcher = new(message.Chat.Id);
+                    pendingSearches.Add(newSearcher);
+
+                    telegramBotClient
+                        .SendTextMessageAsync(message.Chat.Id, "Выберите теги\nНеобходимо выбрать хотябы один тег", replyMarkup: GenerateTagMessage(newSearcher, false));
+
                     PendingObjectAdd newObjcet = GetNewObject(pendingAdd, data);
+                    pendingObjects.Add(newObjcet);
+
+                    #region Старый код обработки заявок
+
+                    /*PendingObjectAdd newObjcet = GetNewObject(pendingAdd, data);
                     InlineKeyboardMarkup moderatorButtons = BotCommands.GetModeratorComands(newObjcet.guid);
 
                     pendingObjects.Add(newObjcet);
@@ -228,7 +288,9 @@ namespace TGBot.BotLogic
                             break;
                     }
 
-                    pendingAdds.Remove(pendingAdd);
+                    pendingAdds.Remove(pendingAdd);*/
+
+                    #endregion Старый код обработки заявок
                 }
                 else telegramBotClient.SendTextMessageAsync(message.Chat.Id, ErrorMessage(pendingAdd.type), replyMarkup: BotCommands.backButton);
             }
@@ -262,8 +324,8 @@ namespace TGBot.BotLogic
                     Searcher searcher = pendingSearches.Find(pendingSearch => pendingSearch.userId == message.Chat.Id);
 
                     if (pendingAdd != null) pendingMessage(pendingAdd);
-                    else if (searcher != null) new Task(() => telegramBotClient
-                    .SendTextMessageAsync(message.Chat.Id, "Выберите теги", replyMarkup: GenerateTagMessage(searcher))).Start();
+                    else if (searcher != null) telegramBotClient
+                    .SendTextMessageAsync(message.Chat.Id, "Выберите теги", replyMarkup: GenerateTagMessage(searcher));
                     else standartMessage();
 
                     break;
@@ -322,8 +384,8 @@ namespace TGBot.BotLogic
             int index = 0;
             Tag[] tags = new Tag[count];
 
-            List<Cource> cources = new List<Cource>();
-            List<Vacancy> vacancies = new List<Vacancy>();
+            List<Cource> cources = new();
+            List<Vacancy> vacancies = new();
 
             foreach (int tagId in tagsIds)
             {
@@ -426,7 +488,7 @@ namespace TGBot.BotLogic
                 /// <summary>
                 /// Лямбда добавлет указанный объект в базу данныех и возращает сообщение для пользователя
                 /// </summary>
-                string addToDb(object addObject, Types type)
+                string addToDb(object addObject, Tag[] tags, Types type)
                 {
                     string userMessage = "";
 
@@ -435,14 +497,38 @@ namespace TGBot.BotLogic
                         case Types.Cource:
                             Cource cource = (Cource)addObject;
                             tGContext.Cources.Add(cource);
+                            tGContext.SaveChanges();
+
+                            foreach (Tag tag in tags)
+                            {
+                                tGContext.CourceTagRecords.Add(new CourceTagRecord
+                                {
+                                    TagId = tag.TagId,
+                                    CourceId = cource.CourceId
+                                });
+                            }
+
                             tGContext.SaveChangesAsync();
+
                             userMessage = "Ваш курс " + GetBrace(cource.CourceName) + " добавлен";
                             break;
 
                         case Types.Vacancy:
                             Vacancy vacancy = (Vacancy)addObject;
                             tGContext.Vacancies.Add(vacancy);
+                            tGContext.SaveChanges();
+
+                            foreach (Tag tag in tags)
+                            {
+                                tGContext.VacancyTagRecords.Add(new VacancyTagRecord
+                                {
+                                    TagId = tag.TagId,
+                                    VacancyId = vacancy.VacancyId
+                                });
+                            }
+
                             tGContext.SaveChangesAsync();
+
                             userMessage = "Ваша вакансия " + GetBrace(vacancy.VacancyName) + " добавлена";
                             break;
                     }
@@ -484,7 +570,7 @@ namespace TGBot.BotLogic
                     switch (modCommand)
                     {
                         case ModCommands.Yes:
-                            string userMessage = addToDb(PendingObjectAdd.addObject, PendingObjectAdd.type);
+                            string userMessage = addToDb(PendingObjectAdd.addObject, PendingObjectAdd.Tags, PendingObjectAdd.type);
 
                             telegramBotClient.SendTextMessageAsync(BotCommands.myId, "Добавлено");
                             telegramBotClient.SendTextMessageAsync(PendingObjectAdd.id, userMessage);
@@ -659,6 +745,7 @@ namespace TGBot.BotLogic
             PendingAdd pendingAdd = pendingAdds.Find(pending => pending.id == callbackQuery.Message.Chat.Id);
             Searcher searcher = pendingSearches.Find(pendingSearch => pendingSearch.userId == callbackQuery.Message.Chat.Id);
 
+            //Кусок ужаса и страха... Обрабатывает ситуации отмены, конца поиска и оформления заявки
             if (pendingAdd == null && searcher == null)
             {
                 switch (callbackQuery.Data)
@@ -698,12 +785,46 @@ namespace TGBot.BotLogic
                 if (pendingAdd != null)
                 {
                     pendingAdds.Remove(pendingAdd);
+                    if (searcher != null) pendingSearches.Remove(searcher);
                     telegramBotClient.SendTextMessageAsync(pendingAdd.id, "Заявка отменена", replyMarkup: BotCommands.whoButtons);
                 }
                 else
                 {
                     pendingSearches.Remove(searcher);
                     telegramBotClient.SendTextMessageAsync(searcher.userId, "Поиск отменён", replyMarkup: BotCommands.whoButtons);
+                }
+            }
+            else if (pendingAdd != null && searcher != null)
+            {
+                string[] data = callbackQuery.Data.Split('_');
+
+                switch (data[0])
+                {
+                    case BotCommands.AddTag:
+                        searcher.AddNewTagId(int.Parse(data[1]));
+                        telegramBotClient.DeleteMessageAsync(callbackQuery.Message.Chat.Id, callbackQuery.Message.MessageId).Wait();
+                        telegramBotClient.SendTextMessageAsync(callbackQuery.Message.Chat.Id, "Выберите теги", replyMarkup: GenerateTagMessage(searcher));
+                        break;
+
+                    case BotCommands.StopSearch:
+                        List<int> tagsId = searcher.GetTagsIds();
+                        if (tagsId.Count == 0) telegramBotClient
+                        .SendTextMessageAsync(callbackQuery.Message.Chat.Id, "Выберите теги\nНеобходимо выбрать хотябы один тег", replyMarkup: GenerateTagMessage(searcher, false));
+                        else
+                        {
+                            HandleObjectAdd(tagsId, callbackQuery.Message.Chat.Id);
+
+                            pendingAdds.Remove(pendingAdd);
+                            pendingSearches.Remove(searcher);
+                        }
+                        break;
+
+                    default:
+                        Console.Error.WriteLine("Пользователь "
+                            + callbackQuery.Message.Chat.Username
+                            + " " + callbackQuery.Message.Chat.Id
+                            + " нашёл необычную команду -> " + data.ToString());
+                        break;
                 }
             }
             else

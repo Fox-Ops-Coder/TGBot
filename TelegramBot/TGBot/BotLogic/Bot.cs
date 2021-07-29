@@ -1,5 +1,6 @@
 ﻿using DataAccessLayer.Model;
 using System;
+using System.Threading;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using TGBot.BotLogic.Commands;
@@ -57,7 +58,9 @@ namespace TGBot.BotLogic
                     updateHandler.HandleMessages();
                 }
 
+                await telegramBotClient.DeleteWebhookAsync(true);
                 await telegramBotClient.CloseAsync();
+
                 Console.Out.WriteLine("Бот остановлен");
 
                 isRunning = false;
@@ -65,6 +68,8 @@ namespace TGBot.BotLogic
             catch (ApiRequestException e)
             {
                 Console.Error.WriteLine(e);
+                needStop = true;
+                isRunning = false;
             }
         }
 
@@ -95,7 +100,7 @@ namespace TGBot.BotLogic
                 }
             } while (!needStop);
 
-            while (isRunning) ;
+            while (isRunning) Thread.Sleep(200);
         }
     }
 }
